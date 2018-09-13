@@ -7,7 +7,7 @@ use vars qw($VERSION);
 use Carp;
 require 5.004 ;
 
-$VERSION = '0.59';
+$VERSION = '0.60';
 
 #Global cache of modules we've loaded
 my %_MODULES;
@@ -289,7 +289,20 @@ sub _encrypt {
   croak "Cannot encrypt: No secret provided!" unless defined $secret;
   $self->_module_loader('Crypt::CBC');	
   my $digest = $self->_endigest($value,$digester);
-  my $cipher_obj = Crypt::CBC->new($secret,$cipher);
+  my $cipher_obj = undef;
+
+    # maintains compatibility with Crypt::CBC Version <2.17
+  if ($ENV{'PERL5_INSECURE_LEGACY_CRYPT'}) {
+    $cipher_obj = Crypt::CBC->new({
+        key                     => $secret,
+        cipher                  => $cipher,
+        header                  => 'randomiv',
+        insecure_legacy_decrypt => 1
+    });
+  } else {
+    $cipher_obj = Crypt::CBC->new($secret,$cipher);
+  }
+
   return $cipher_obj->encrypt($digest);
 }
 sub _decrypt {
@@ -300,7 +313,20 @@ sub _decrypt {
   my $secret = $self->secret;
   croak "Cannot encrypt: No secret provided!" unless defined $secret;
   $self->_module_loader('Crypt::CBC');	
-  my $cipher_obj = Crypt::CBC->new($secret,$cipher);
+  my $cipher_obj = undef;
+
+    # maintains compatibility with Crypt::CBC Version <2.17
+  if ($ENV{'PERL5_INSECURE_LEGACY_CRYPT'}) {
+    $cipher_obj = Crypt::CBC->new({
+        key                     => $secret,
+        cipher                  => $cipher,
+        header                  => 'randomiv',
+        insecure_legacy_decrypt => 1
+    });
+  } else {
+    $cipher_obj = Crypt::CBC->new($secret,$cipher);
+  }
+
   my $digest = $cipher_obj->decrypt($input);
   return $self->_dedigest($digest,$digester);
 }
